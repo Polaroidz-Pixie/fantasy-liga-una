@@ -114,14 +114,16 @@ details.team summary{cursor:pointer}
   main{max-width:1480px;padding:18px 24px}
   .build-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(400px,1fr);gap:24px;align-items:start;margin-top:12px}
   .bar{position:static;border-bottom:0;margin-top:0;padding-top:0}
-  .court{max-width:none;grid-template-columns:minmax(0,1fr) 190px;gap:16px}
+  .court{max-width:none;grid-template-columns:minmax(0,1fr);gap:14px}
   .pitch{padding:46px 22px 22px}
   .rowc{gap:16px}
   .rowc.back{margin-top:46px}
   .slot{min-height:132px;font-size:14px;gap:6px}
   .slot .pr{font-size:17px}
   .slot .pos{font-size:14px;padding:5px 8px}
-  .bench .slot{min-height:132px}
+  .bench{display:flex;gap:14px;align-items:center;padding:10px 14px;width:fit-content;margin:0 auto}
+  .bench .bt{margin:0;flex:0 0 120px;font-size:13px}
+  .bench .slot{flex:0 0 230px;min-height:104px}
   .build-right.card{position:sticky;top:12px;display:flex;flex-direction:column;max-height:calc(100vh - 24px);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px}
   .build-right .filters{margin-top:0}
   .build-right .filters input{min-width:0;flex:1 1 100%}
