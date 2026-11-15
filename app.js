@@ -25,12 +25,13 @@ function canAdd(p){ if(pick.includes(p.id))return false; if(countPos(p.pos)>=NEE
 
 // ---- montar equipa ----
 const teamSel=document.getElementById('team');
-function fillTeams(){[...new Set(P.map(p=>p.team))].sort((a,b)=>a.localeCompare(b,'pt')).forEach(t=>teamSel.insertAdjacentHTML('beforeend',`<option>${esc(t)}</option>`));}
+function fillTeams(){const mp=document.getElementById('maxp');[...new Set(P.map(p=>p.price))].sort((a,b)=>b-a).forEach(v=>mp.insertAdjacentHTML('beforeend',`<option value="${v}">Até ${m(v)} M</option>`));
+[...new Set(P.map(p=>p.team))].sort((a,b)=>a.localeCompare(b,'pt')).forEach(t=>teamSel.insertAdjacentHTML('beforeend',`<option>${esc(t)}</option>`));}
 const chips=document.getElementById('poschips');
 chips.insertAdjacentHTML('beforeend',`<button type="button" class="chip" data-p="ALL" aria-pressed="true">Todas as posições</button>`);
 Object.keys(POSL).forEach(k=>chips.insertAdjacentHTML('beforeend',`<button type="button" class="chip" data-p="${k}" aria-pressed="false">${POSPL[k]}</button>`));
 chips.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const k=b.dataset.p;if(k==='ALL')posF.clear();else posF.has(k)?posF.delete(k):posF.add(k);activePos=null;renderAll();});
-['q','team','sort'].forEach(id=>document.getElementById(id).addEventListener('input',renderList));
+['q','team','sort','maxp'].forEach(id=>document.getElementById(id).addEventListener('input',renderList));
 document.getElementById('tname').value=store.get('lu25-name')||'';
 document.getElementById('tname').addEventListener('input',e=>{store.set('lu25-name',e.target.value);renderSubmit();});
 
@@ -50,14 +51,14 @@ function renderCourt(){
 }
 document.getElementById('court').addEventListener('click',e=>{
   const rm=e.target.closest('[data-rm]'); if(rm){toggle(+rm.dataset.rm);return;}
-  const s=e.target.closest('[data-slot]'); if(s){const p=s.dataset.slot; posF.clear(); if(activePos===p){activePos=null;renderAll();return;} activePos=p;renderAll();document.getElementById('poschips').scrollIntoView({behavior:'smooth',block:'start'});}
+  const s=e.target.closest('[data-slot]'); if(s){const p=s.dataset.slot; posF.clear(); if(activePos===p){activePos=null;renderAll();return;} activePos=p;renderAll();document.getElementById('list').scrollTop=0;if(window.innerWidth<1000)document.getElementById('poschips').scrollIntoView({behavior:'smooth',block:'start'});}
 });
 function renderList(){
   const q=document.getElementById('q').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const t=teamSel.value, so=document.getElementById('sort').value;
+  const t=teamSel.value, so=document.getElementById('sort').value, mx=parseFloat(document.getElementById('maxp').value)||Infinity;
   const pf=activePos?new Set([activePos]):posF;
   chips.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p==='ALL'?!pf.size:pf.has(b.dataset.p)));
-  let L=P.filter(p=>(!t||p.team===t)&&(!pf.size||pf.has(p.pos))&&(!q||p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(q)));
+  let L=P.filter(p=>p.price<=mx&&(!t||p.team===t)&&(!pf.size||pf.has(p.pos))&&(!q||p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(q)));
   L.sort(so==='n'?(a,b)=>a.name.localeCompare(b.name,'pt'):so==='pa'?(a,b)=>a.price-b.price||a.name.localeCompare(b.name,'pt'):(a,b)=>b.price-a.price||a.name.localeCompare(b.name,'pt'));
   document.getElementById('lcount').textContent=`${L.length} jogador${L.length===1?'':'es'}${activePos?' · a escolher: '+POSL[activePos]:''}`;
   document.getElementById('list').innerHTML=L.map(p=>{

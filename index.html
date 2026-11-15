@@ -24,29 +24,36 @@
         <li>Os pontos vêm das estatísticas oficiais de cada jogo: ataques ganhos, aces, blocos e receções somam, e os erros descontam. Vê os valores de cada ação por posição em <a href="#regras">Regras de pontos</a>.</li>
       </ul></details>
     </div>
-    <div class="bar">
-      <div class="budget">
-        <div class="money" id="money"></div>
-        <div class="meter" aria-hidden="true"><i id="meter"></i></div>
-        <div class="dim" id="count"></div>
+    <div class="build-grid">
+      <div class="build-left">
+        <div class="bar">
+          <div class="budget">
+            <div class="money" id="money"></div>
+            <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+            <div class="dim" id="count"></div>
+          </div>
+        </div>
+        <div class="court" id="court"></div>
+        <div class="card submitcard">
+          <h3>Submeter equipa</h3>
+          <div class="submitbox">
+            <input id="tname" maxlength="30" placeholder="Nome da tua equipa" aria-label="Nome da tua equipa">
+            <button class="btn" id="submit" disabled>Submeter</button>
+          </div>
+          <div class="msg dim" id="submitmsg">Escolhe os 7 jogadores e dá um nome à equipa.</div>
+        </div>
       </div>
-    </div>
-    <div class="court" id="court"></div>
-    <div class="filters">
-      <input id="q" type="search" placeholder="Procurar jogador" aria-label="Procurar jogador">
-      <select id="team" aria-label="Equipa"><option value="">Todas as equipas</option></select>
-      <select id="sort" aria-label="Ordenar"><option value="pd">Mais caros primeiro</option><option value="pa">Mais baratos primeiro</option><option value="n">Nome</option></select>
-    </div>
-    <div class="chips" id="poschips" role="group" aria-label="Posição"></div>
-    <p class="dim" id="lcount" style="font-size:13px;margin:8px 0"></p>
-    <div class="list" id="list"></div>
-    <div class="card" style="margin-top:14px">
-      <h3>Submeter equipa</h3>
-      <div class="submitbox">
-        <input id="tname" maxlength="30" placeholder="Nome da tua equipa" aria-label="Nome da tua equipa">
-        <button class="btn" id="submit" disabled>Submeter</button>
+      <div class="build-right card" id="panel">
+        <div class="filters">
+          <input id="q" type="search" placeholder="Procurar jogador" aria-label="Procurar jogador">
+          <select id="team" aria-label="Equipa"><option value="">Todas as equipas</option></select>
+          <select id="maxp" aria-label="Preço máximo"><option value="">Qualquer preço</option></select>
+          <select id="sort" aria-label="Ordenar"><option value="pd">Mais caros primeiro</option><option value="pa">Mais baratos primeiro</option><option value="n">Nome</option></select>
+        </div>
+        <div class="chips" id="poschips" role="group" aria-label="Posição"></div>
+        <p class="dim" id="lcount" style="font-size:13px;margin:8px 0"></p>
+        <div class="list" id="list"></div>
       </div>
-      <div class="msg dim" id="submitmsg">Escolhe os 7 jogadores e dá um nome à equipa.</div>
     </div>
   </section>
 
