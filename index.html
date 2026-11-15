@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasy Liga UNA · Jogo de teste 2025/26</title>
+<meta name="description" content="Jogo de teste da Fantasy Liga UNA: monta a tua equipa da época 2025/26 de voleibol.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header><h1>Fantasy <span>Liga UNA</span></h1><p>Jogo de teste · época 2025/26 completa</p>
+<nav class="tabs" aria-label="Secções"><a href="#montar" data-v="montar">Montar equipa</a><a href="#regras" data-v="regras">Regras</a><a href="#ranking" data-v="ranking">Ranking</a></nav></header>
+<main>
+  <div class="loading" id="boot">A carregar os jogadores…</div>
+  <section id="v-build" hidden>
+    <div class="card rules">
+      <details><summary>Como se joga</summary>
+      <ul>
+        <li>Escolhe <b>7 jogadores</b> da Liga UNA 2025/26: <b>1 distribuidor, 1 oposto, 2 zonas 4, 2 centrais e 1 líbero</b>.</li>
+        <li>Tens um orçamento de <b>60 M</b>.</li>
+        <li>Imagina que estás em setembro de 2025: a equipa fica fechada para a época toda, sem substituições, transferências nem capitão.</li>
+        <li>Quando submeteres, vês logo os pontos que a tua equipa fez em toda a época, com as regras de pontos da Fantasy Liga UNA.</li>
+        <li>Podes pôr a equipa no ranking com o teu nome e criar quantas equipas quiseres. No ranking vês as equipas de todos, quem escolheram e os pontos totais.</li>
+        <li>Os pontos vêm das estatísticas oficiais de cada jogo: ataques ganhos, aces, blocos e receções somam, e os erros descontam. Vê os valores de cada ação por posição em <a href="#regras">Regras de pontos</a>.</li>
+      </ul></details>
+    </div>
+    <div class="bar">
+      <div class="budget">
+        <div class="money" id="money"></div>
+        <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+        <div class="dim" id="count"></div>
+      </div>
+    </div>
+    <div class="court" id="court"></div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Procurar jogador" aria-label="Procurar jogador">
+      <select id="team" aria-label="Equipa"><option value="">Todas as equipas</option></select>
+      <select id="sort" aria-label="Ordenar"><option value="pd">Mais caros primeiro</option><option value="pa">Mais baratos primeiro</option><option value="n">Nome</option></select>
+    </div>
+    <div class="chips" id="poschips" role="group" aria-label="Posição"></div>
+    <p class="dim" id="lcount" style="font-size:13px;margin:8px 0"></p>
+    <div class="list" id="list"></div>
+    <div class="card" style="margin-top:14px">
+      <h3>Submeter equipa</h3>
+      <div class="submitbox">
+        <input id="tname" maxlength="30" placeholder="Nome da tua equipa" aria-label="Nome da tua equipa">
+        <button class="btn" id="submit" disabled>Submeter</button>
+      </div>
+      <div class="msg dim" id="submitmsg">Escolhe os 7 jogadores e dá um nome à equipa.</div>
+    </div>
+  </section>
+
+  <section id="v-res" hidden>
+    <div class="card">
+      <div class="dim" id="r-name"></div>
+      <div class="score" id="r-score"></div>
+      <div class="dim">pontos fantasy em toda a época 2025/26</div>
+      <div id="r-share" style="margin-top:12px"></div>
+      <p style="margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="newteam">Criar nova equipa</button><a class="btn ghost" href="#ranking" style="text-decoration:none">Ver ranking</a></p>
+    </div>
+    <div class="card" style="margin-top:12px"><h3>A tua equipa</h3><table id="r-team"></table></div>
+  </section>
+  <section id="v-rules" hidden><div class="card" id="rules"></div></section>
+  <section id="v-rank" hidden>
+    <div class="card"><h2>Ranking</h2><p class="dim" style="margin:0 0 8px;font-size:13px">Todas as equipas que os amigos puseram no ranking, ordenadas pelos pontos de toda a época 2025/26. Toca numa equipa para ver os jogadores.</p><div id="r-league"></div><div id="r-owner"></div></div>
+  </section>
+</main>
+
+<div class="overlay" id="confirm" hidden role="dialog" aria-modal="true" aria-labelledby="c-title">
+  <div class="card dialog">
+    <h2 id="c-title">Submeter a equipa?</h2>
+    <p>Depois de submeter, a equipa fica fechada e vês logo os pontos da época. Podes sempre criar outra.</p>
+    <div id="c-list" class="dim" style="font-size:14px"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" id="c-no">Voltar</button><button class="btn" id="c-yes">Submeter</button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
