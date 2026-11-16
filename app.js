@@ -32,8 +32,6 @@ chips.insertAdjacentHTML('beforeend',`<button type="button" class="chip" data-p=
 Object.keys(POSL).forEach(k=>chips.insertAdjacentHTML('beforeend',`<button type="button" class="chip" data-p="${k}" aria-pressed="false">${POSPL[k]}</button>`));
 chips.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const k=b.dataset.p;if(k==='ALL')posF.clear();else posF.has(k)?posF.delete(k):posF.add(k);activePos=null;renderAll();});
 ['q','team','sort','maxp'].forEach(id=>document.getElementById(id).addEventListener('input',renderList));
-document.getElementById('tname').value=store.get('lu25-name')||'';
-document.getElementById('tname').addEventListener('input',e=>{store.set('lu25-name',e.target.value);renderSubmit();renderAction();});
 
 function renderCourt(){
   // 5-1 clássico: rede em cima; à frente zona 4, central e oposto; atrás zona 4, central e distribuidor; líbero entra para o central de trás
@@ -78,10 +76,10 @@ function toggle(id){
   store.set('lu25-draft',pick); renderAll();
 }
 function renderSubmit(){
-  const ok=pick.length===7&&spent()<=BUDGET+1e-9&&document.getElementById('tname').value.trim().length>=2;
+  const ok=pick.length===7&&spent()<=BUDGET+1e-9;
   document.getElementById('submit').disabled=!ok;
   const left=7-pick.length;
-  document.getElementById('submitmsg').textContent=ok?'Pronto. Confirma a equipa antes de submeter.':left>0?`Faltam ${left} jogador${left===1?'':'es'}.`:'Dá um nome à equipa (2 a 30 caracteres).';
+  document.getElementById('submitmsg').textContent=ok?'Pronto. Confirma a equipa antes de submeter.':left>0?`Faltam ${left} jogador${left===1?'':'es'}.`:'Passaste o orçamento.';
 }
 function renderAction(){
   const ab=document.getElementById('actionbar'), onBuild=!document.getElementById('v-build').hidden;
@@ -95,9 +93,8 @@ function renderAction(){
   go.disabled=falta>0; go.textContent=falta>0?`Faltam ${falta}`:'Continuar';
 }
 document.getElementById('ab-go').addEventListener('click',()=>{
-  const tn=document.getElementById('tname');
-  if(tn.value.trim().length>=2&&!document.getElementById('submit').disabled){document.getElementById('submit').click();return;}
-  document.querySelector('.submitcard').scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>tn.focus({preventScroll:true}),350);
+  if(!document.getElementById('submit').disabled){document.getElementById('submit').click();return;}
+  document.querySelector('.submitcard').scrollIntoView({behavior:'smooth',block:'center'});
 });
 function renderAll(){renderCourt();renderList();renderSubmit();renderAction();const rb=document.getElementById('b-reset');rb.disabled=!pick.length;if(!pick.length)bResetArm(false);}
 let bResetT=null;
@@ -117,14 +114,14 @@ const teamPts=ids=>ids.reduce((a,id)=>a+pts(id),0);
 // ---- submeter ----
 const dlg=document.getElementById('confirm');
 document.getElementById('submit').addEventListener('click',()=>{
-  document.getElementById('c-list').innerHTML=`<b>${esc(document.getElementById('tname').value.trim())}</b><br>`+pick.map(id=>{const p=BY.get(id);return `${p.pos} · ${esc(p.name)} (${m(p.price)} M)`}).join('<br>')+`<br>Total: ${m(spent())} M`;
+  document.getElementById('c-list').innerHTML=pick.map(id=>{const p=BY.get(id);return `${p.pos} · ${esc(p.name)} (${m(p.price)} M)`}).join('<br>')+`<br>Total: ${m(spent())} M`;
   dlg.hidden=false; document.getElementById('c-yes').focus();
 });
 document.getElementById('c-no').addEventListener('click',()=>{dlg.hidden=true;});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')dlg.hidden=true;});
 document.getElementById('c-yes').addEventListener('click',async()=>{
   const yes=document.getElementById('c-yes'); yes.disabled=true;
-  const team={n:document.getElementById('tname').value.trim(),p:[...pick]};
+  const team={n:'',p:[...pick]};
   const {data,error}=await sb.rpc('pontuar_equipa',{p_epoca:EPOCA,p_jogadores:team.p});
   yes.disabled=false; dlg.hidden=true;
   if(error){const s=document.getElementById('submitmsg');s.className='msg err';s.textContent='Não deu para submeter: '+errMsg(error);return;}
@@ -134,7 +131,7 @@ document.getElementById('c-yes').addEventListener('click',async()=>{
   go('resultado');
 });
 document.getElementById('newteam').addEventListener('click',()=>{
-  pick=[]; store.set('lu25-draft',pick); document.getElementById('tname').value=''; store.set('lu25-name','');
+  pick=[]; store.set('lu25-draft',pick);
   current=null; store.set('lu25-current',null); go('montar');
 });
 
@@ -143,7 +140,7 @@ function renderResults(){
   if(!current) return;
   Object.entries(current.pts||{}).forEach(([k,v])=>PTS.set(Number(k),v));
   const tot=teamPts(current.p);
-  document.getElementById('r-name').textContent=current.n;
+  document.getElementById('r-name').textContent=(current.added&&current.n)||'A tua equipa';
   document.getElementById('r-score').textContent=n0(tot);
   const rows=current.p.map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos));
   document.getElementById('r-team').innerHTML=`<thead><tr><th class="l">Jogador</th><th>Preço</th><th>Pontos</th></tr></thead><tbody>${rows.map(p=>`<tr><td class="l"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.name)}<div class="dim" style="font-size:12px">${esc(p.team)}</div></td><td>${m(p.price)}</td><td><b>${n0(pts(p.id))}</b></td></tr>`).join('')}</tbody><tfoot><tr><td class="l"><b>Total</b></td><td>${m(rows.reduce((a,p)=>a+p.price,0))}</td><td><b>${n0(tot)}</b></td></tr></tfoot>`;
@@ -151,21 +148,21 @@ function renderResults(){
   if(current.added){
     sh.innerHTML=`<p style="margin:0"><b>No ranking</b> · ${current.added.posicao}.º lugar quando foi registada.</p>`; return;
   }
-  sh.innerHTML=`<h3>Pôr no ranking</h3><div class="submitbox" style="margin-top:0"><input id="mname" maxlength="30" placeholder="O teu nome" aria-label="O teu nome"><button class="btn" id="addrank">Adicionar ao ranking</button></div><div class="msg" id="addmsg"></div>`;
+  sh.innerHTML=`<h3>Pôr no ranking</h3><div class="submitbox" style="margin-top:0"><input id="mname" maxlength="30" placeholder="Nome no ranking" aria-label="Nome no ranking"><button class="btn" id="addrank">Adicionar ao ranking</button></div><div class="msg" id="addmsg"></div>`;
   document.getElementById('mname').value=store.get('lu25-manager')||'';
   document.getElementById('addrank').addEventListener('click',addToRanking);
 }
 let writing=false;
 async function addToRanking(){
   const nm=document.getElementById('mname').value.trim(), msg=document.getElementById('addmsg');
-  if(nm.length<2){msg.className='msg err';msg.textContent='Escreve o teu nome (2 a 30 caracteres).';return;}
+  if(nm.length<2){msg.className='msg err';msg.textContent='Escreve um nome (2 a 30 caracteres).';return;}
   if(writing) return; writing=true; document.getElementById('addrank').disabled=true;
   store.set('lu25-manager',nm);
-  const {data,error}=await sb.rpc('guardar_equipa',{p_epoca:EPOCA,p_nome_equipa:current.n,p_nome_treinador:nm,p_jogadores:current.p});
+  const {data,error}=await sb.rpc('guardar_equipa',{p_epoca:EPOCA,p_nome_equipa:nm,p_nome_treinador:nm,p_jogadores:current.p});
   writing=false;
   if(error){document.getElementById('addrank').disabled=false;msg.className='msg err';msg.textContent='Não deu para guardar: '+errMsg(error);return;}
   const r=Array.isArray(data)?data[0]:data;
-  current.added={id:r.id,posicao:r.posicao}; store.set('lu25-current',current); renderResults();
+  current.n=nm; current.added={id:r.id,posicao:r.posicao}; store.set('lu25-current',current); renderResults();
 }
 
 // ---- ranking ----
@@ -181,7 +178,7 @@ function renderLeague(err){
   if(leagueState==='error'){el.innerHTML=`<div class="empty err">Não deu para carregar o ranking: ${esc(err||'')}</div>`;return;}
   document.querySelectorAll('#rk-modes .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===rankMode));
   const mine=rankMode==='rapido'?(fast&&fast.added?fast.added.id:null):(current&&current.added?current.added.id:null);
-  el.innerHTML=`<p style="margin:0 0 8px"><button class="btn ghost" id="reload" style="font-size:14px;padding:7px 12px">Atualizar</button></p>`+(league.length?`<table class="rk"><thead><tr><th class="l">#</th><th class="l">Equipa</th><th>Pontos</th></tr></thead><tbody>${league.map((t,i)=>`<tr class="${t.id===mine?'me':''}"><td class="l" style="vertical-align:top">${i+1}</td><td class="l"><details><summary><b>${esc(t.nome_equipa)}</b>${rankMode==='rapido'&&t.nome_equipa===t.nome_treinador?'':`<div class="who">${esc(t.nome_treinador)}</div>`}</summary><div class="pl">${(t.jogadores||[]).map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos)).map(p=>`<span class="pos ${p.pos}" style="min-width:28px;font-size:10px;padding:2px 4px">${p.pos}</span> ${esc(p.name)} <span style="opacity:.75">· ${esc(p.team)} · ${m(p.price)} M</span>`).join('<br>')}</div></details></td><td style="vertical-align:top"><b>${n0(Number(t.pontos))}</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Ainda não há equipas no ranking.</div>');
+  el.innerHTML=`<p style="margin:0 0 8px"><button class="btn ghost" id="reload" style="font-size:14px;padding:7px 12px">Atualizar</button></p>`+(league.length?`<table class="rk"><thead><tr><th class="l">#</th><th class="l">Equipa</th><th>Pontos</th></tr></thead><tbody>${league.map((t,i)=>`<tr class="${t.id===mine?'me':''}"><td class="l" style="vertical-align:top">${i+1}</td><td class="l"><details><summary><b>${esc(t.nome_equipa)}</b>${t.nome_equipa===t.nome_treinador?'':`<div class="who">${esc(t.nome_treinador)}</div>`}</summary><div class="pl">${(t.jogadores||[]).map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos)).map(p=>`<span class="pos ${p.pos}" style="min-width:28px;font-size:10px;padding:2px 4px">${p.pos}</span> ${esc(p.name)} <span style="opacity:.75">· ${esc(p.team)} · ${m(p.price)} M</span>`).join('<br>')}</div></details></td><td style="vertical-align:top"><b>${n0(Number(t.pontos))}</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Ainda não há equipas no ranking.</div>');
   document.getElementById('reload').addEventListener('click',loadLeague);
 }
 
