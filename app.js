@@ -197,12 +197,21 @@ function fastDeal(avoid){
 function fastSave(){store.set('lu25-fast',fast);}
 function fastNew(){fast={picks:[],offer:[],rerolls:FAST_REROLLS,phase:'pick',n:'',pts:null,added:null};fastDeal();fastSave();renderFast();}
 function fastValid(){return fast&&Array.isArray(fast.picks)&&fast.picks.every(id=>BY.has(id))&&Array.isArray(fast.offer)&&fast.offer.every(id=>BY.has(id));}
+// Emblemas originais das equipas (sigla + cor), não são os símbolos oficiais dos clubes
+const CLUBS={'Benfica':['BEN','#c8102e'],'Sporting':['SCP','#00804a'],'Vitória SC':['VSC','#2b2b2b'],'Leixões':['LEI','#d6452b'],
+ 'Académica de Espinho':['AAE','#3f4a8a'],'Sporting de Espinho':['SCE','#1f6f8b'],'São Mamede':['SMA','#7a4fa0'],'Castêlo da Maia':['CMA','#c48a12'],
+ 'Kairós':['KAI','#0e8f86'],'Madalena':['MAD','#9c2f6b'],'Ala Gondomar':['GON','#4b7d2a'],'Santo Tirso':['STI','#b5562a'],'Oeiras':['OEI','#2f5fb3']};
+function club(team){const t=String(team||'').split(' / ')[0];const c=CLUBS[t];if(c)return c;const ab=t.split(/\s+/).filter(w=>w.length>2).map(w=>w[0]).join('').slice(0,3).toUpperCase()||'?';return [ab,'#5e6a73'];}
+const badge=(team,cls='')=>{const [ab,col]=club(team);return `<span class="cb ${cls}" style="background:${col}" title="${esc(team)}" aria-hidden="true">${ab}</span>`;};
+function histShort(h){const m2=String(h||'').match(/^([\d,]+) pts\/jogo em (\d+) jogos \((.+)\)$/);
+  if(m2) return `<b>${m2[1]}</b> pts/jogo <span class="hy">· ${m2[2]} jogos em ${esc(m2[3])}</span>`;
+  return /^Novo/.test(h||'')?'Novo na Liga':'Sem jogos nas épocas anteriores';}
 function fastCourt(){
   const ids={}; Object.keys(NEED).forEach(p=>ids[p]=fast.picks.filter(id=>BY.get(id).pos===p));
   const open=new Set(fast.phase==='pick'?fast.offer.map(id=>BY.get(id).pos):[]);
   const slot=(p,k)=>{const id=ids[p][k];
     if(id){const x=BY.get(id), pt=fast.phase==='result'&&fast.pts?`<span class="pr">${n0(fast.pts[id]??0)} pts</span>`:`<span class="pr">${m(x.price)} M</span>`;
-      return `<div class="slot filled"><span class="pos ${p}">${p}</span><span class="nm">${esc(x.name)}</span><span class="dim" style="font-size:11px">${esc(x.team)}</span>${pt}</div>`;}
+      return `<div class="slot filled"><span class="slot-top">${badge(x.team,'sm')}<span class="pos ${p}">${p}</span></span><span class="nm">${esc(x.name)}</span><span class="dim" style="font-size:11px">${esc(x.team)}</span>${pt}</div>`;}
     return `<div class="slot ${open.has(p)?'next':''}"><span class="pos ${p}">${p}</span><span>${POSL[p]}</span></div>`;};
   document.getElementById('f-court').innerHTML=`<div class="pitch" role="group" aria-label="Campo"><span class="net-l">REDE</span>
     <div class="rowc">${slot('Z4',0)}${slot('MB',0)}${slot('OPP',0)}</div><div class="attack" style="position:relative;margin:16px -12px -18px"></div><div class="rowc back">${slot('Z4',1)}${slot('MB',1)}${slot('S',0)}</div></div>
@@ -218,7 +227,7 @@ function renderFast(){
   const side=document.getElementById('f-side');
   if(fast.phase==='pick'){
     side.innerHTML=`<h3>Escolhe um jogador</h3><p class="dim" style="margin:0;font-size:13px">7 rondas, 6 jogadores ao calhas em cada uma. O que escolheres vai para o campo. Sem orçamento: o valor é só uma referência. Podes trocar os 6 jogadores ${FAST_REROLLS} vezes por jogo.</p>
-      <div class="offer">${fast.offer.map(id=>{const p=BY.get(id);return `<button type="button" class="pc" data-pick="${id}"><span class="pos ${p.pos}">${p.pos}</span><span><span class="nm">${esc(p.name)}</span><span class="tm">${esc(p.team)}</span></span><span class="vl">${m(p.price)}<small>VALOR</small></span></button>`;}).join('')}</div>`;
+      <div class="offer">${fast.offer.map(id=>{const p=BY.get(id);return `<button type="button" class="pc" data-pick="${id}">${badge(p.team)}<span class="pc-mid"><span class="nm">${esc(p.name)}</span><span class="tm"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.team)}</span><span class="hs">${histShort(p.hist)}</span></span><span class="vl">${m(p.price)}<small>VALOR</small></span></button>`;}).join('')}</div>`;
   } else if(fast.phase==='name'){
     side.innerHTML=`<h3>Equipa completa</h3><p class="dim" style="margin:0 0 10px;font-size:13px">Submete para veres os pontos que esta equipa fez em toda a época 2025/26.</p>
       <p style="margin:0;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="f-score" type="button">Submeter</button><button class="btn ghost" id="f-restart" type="button">Recomeçar</button></p><div class="msg" id="f-msg"></div>`;
