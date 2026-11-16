@@ -209,7 +209,7 @@ const CLUBS={'Benfica':['BEN','#c8102e'],'Sporting':['SCP','#00804a'],'Vitória 
 function club(team){const t=String(team||'').split(' / ')[0];const c=CLUBS[t];if(c)return c;const ab=t.split(/\s+/).filter(w=>w.length>2).map(w=>w[0]).join('').slice(0,3).toUpperCase()||'?';return [ab,'#5e6a73'];}
 // Se existir um ficheiro de emblema em escudos/ (listado em escudos/index.json, ex.: {"BEN":"BEN.png"}), usa-o; senão, a sigla
 let CRESTS={};
-fetch('escudos/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(j=>{if(j&&typeof j==='object'){CRESTS=j;if(fast&&!document.getElementById('v-fast').hidden)renderFast();}}).catch(()=>{});
+fetch('escudos/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(j=>{if(j&&typeof j==='object'){CRESTS=j;if(fast&&!document.getElementById('v-fast').hidden)renderFast();if(BY.size)renderHomeCrests();}}).catch(()=>{});
 const badge=(team,cls='')=>{const [ab,col]=club(team);const f=CRESTS[ab];
   if(f&&/^[A-Za-z0-9_-]+\.(png|svg|webp|jpg)$/.test(f)) return `<img class="cb img ${cls}" src="escudos/${f}" alt="" title="${esc(team)}" loading="lazy">`;
   return `<span class="cb ${cls}" style="background:${col}" title="${esc(team)}" aria-hidden="true">${ab}</span>`;};
@@ -326,14 +326,15 @@ function route(){
   if(!BY.size) return;
   let v=location.hash.slice(1); current=store.get('lu25-current');
   if(v==='resultado'&&!current) v='montar';
-  if(!['montar','resultado','ranking','regras','rapido'].includes(v)) v=current?'resultado':'montar';
+  if(!['inicio','montar','resultado','ranking','regras','rapido'].includes(v)) v='inicio';
+  document.getElementById('v-home').hidden=v!=='inicio';
   document.getElementById('v-build').hidden=v!=='montar';
   document.getElementById('v-res').hidden=v!=='resultado';
   document.getElementById('v-rank').hidden=v!=='ranking';
   document.getElementById('v-rules').hidden=v!=='regras';
   document.getElementById('v-fast').hidden=v!=='rapido';
   document.querySelectorAll('.tabs a, .bottomnav a').forEach(a=>a.dataset.v===(v==='resultado'?'montar':v)?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
-  if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague(); else if(v==='rapido') renderFast();
+  if(v==='inicio') renderHome(); else if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague(); else if(v==='rapido') renderFast();
   renderAction();
   window.scrollTo(0,0);
 }
@@ -346,6 +347,29 @@ document.addEventListener('click',e=>{
   e.preventDefault(); go(v);
 });
 window.addEventListener('hashchange',route);
+
+// ---- início ----
+function renderHomeCrests(){
+  const teams=[...new Set(P.map(p=>String(p.team).split(' / ')[0]))].sort((a,b)=>a.localeCompare(b,'pt'));
+  document.getElementById('h-crests').innerHTML=teams.map(t=>badge(t,'hc')).join('');
+}
+let homeTopAt=0;
+async function renderHome(){
+  renderHomeCrests();
+  const pb=document.getElementById('h-play-build'), pf=document.getElementById('h-play-fast');
+  pb.textContent=current?'Ver a minha equipa':pick.length?`Continuar (${pick.length} de 7)`:'Jogar';
+  pb.setAttribute('href',current?'#resultado':'#montar');
+  pf.textContent=fast&&fast.phase==='pick'&&fast.picks.length?`Continuar (ronda ${fast.picks.length+1} de ${FAST_ROUNDS})`:fast&&fast.phase!=='pick'?'Continuar':'Jogar';
+  if(Date.now()-homeTopAt<30000) return; homeTopAt=Date.now();
+  const q=md=>sb.from('equipas').select('nome_equipa,pontos').eq('epoca',EPOCA).eq('modo',md).order('pontos',{ascending:false}).order('criada_em',{ascending:true}).limit(3);
+  const [a,b]=await Promise.all([q('classico'),q('rapido')]);
+  if(a.error||b.error) return;
+  const col=(t,rows,md)=>`<div><h3>${t}</h3>${rows.length?`<ol class="top3">${rows.map(r=>`<li><span>${esc(r.nome_equipa)}</span><b>${n0(Number(r.pontos))}</b></li>`).join('')}</ol>`:'<div class="dim" style="font-size:13px">Ainda ninguém. Sê o primeiro!</div>'}<a class="more" href="#ranking" data-mode="${md}">Ver ranking</a></div>`;
+  const el=document.getElementById('h-top');
+  el.innerHTML=`<h2>Pódio</h2><div class="top-grid">${col('Fantasy',a.data||[],'classico')}${col('Modo rápido',b.data||[],'rapido')}</div>`;
+  el.hidden=false;
+}
+document.getElementById('h-top').addEventListener('click',e=>{const a=e.target.closest('[data-mode]');if(a)rankMode=a.dataset.mode;});
 
 // ---- arranque ----
 (async function boot(){
