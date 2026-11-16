@@ -99,7 +99,14 @@ document.getElementById('ab-go').addEventListener('click',()=>{
   if(tn.value.trim().length>=2&&!document.getElementById('submit').disabled){document.getElementById('submit').click();return;}
   document.querySelector('.submitcard').scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>tn.focus({preventScroll:true}),350);
 });
-function renderAll(){renderCourt();renderList();renderSubmit();renderAction();}
+function renderAll(){renderCourt();renderList();renderSubmit();renderAction();const rb=document.getElementById('b-reset');rb.disabled=!pick.length;if(!pick.length)bResetArm(false);}
+let bResetT=null;
+function bResetArm(on){const b=document.getElementById('b-reset');clearTimeout(bResetT);b.classList.toggle('warn',on);b.textContent=on?'Confirmar?':'Limpar equipa';if(on)bResetT=setTimeout(()=>bResetArm(false),3000);}
+document.getElementById('b-reset').addEventListener('click',()=>{
+  const b=document.getElementById('b-reset');
+  if(!b.classList.contains('warn')){bResetArm(true);return;}
+  bResetArm(false); pick=[]; store.set('lu25-draft',pick); posF.clear(); activePos=null; renderAll();
+});
 
 // ---- estado ----
 let current=null;   // equipa acabada de submeter {n,p,pts:{id:pontos},added:{id,posicao}|null}
