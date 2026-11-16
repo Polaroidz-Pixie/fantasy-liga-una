@@ -82,7 +82,7 @@ function renderSubmit(){
   document.getElementById('submitmsg').textContent=ok?'Pronto. Confirma a equipa antes de submeter.':left>0?`Faltam ${left} jogador${left===1?'':'es'}.`:'Passaste o orçamento.';
 }
 function renderAction(){
-  const ab=document.getElementById('actionbar'), onBuild=!document.getElementById('v-build').hidden;
+  const ab=document.getElementById('actionbar'), onBuild=!document.getElementById('v-build').hidden&&!current;
   ab.hidden=!onBuild; document.body.classList.toggle('has-action',onBuild);
   if(!onBuild) return;
   const left=BUDGET-spent(), mo=document.getElementById('ab-money');
@@ -96,7 +96,11 @@ document.getElementById('ab-go').addEventListener('click',()=>{
   if(!document.getElementById('submit').disabled){document.getElementById('submit').click();return;}
   document.querySelector('.submitcard').scrollIntoView({behavior:'smooth',block:'center'});
 });
-function renderAll(){renderCourt();renderList();renderSubmit();renderAction();const rb=document.getElementById('b-reset');rb.disabled=!pick.length;if(!pick.length)bResetArm(false);}
+function renderAll(){
+  const done=!!current; document.getElementById('v-build').classList.toggle('done',done);
+  document.getElementById('b-head').hidden=!done; document.getElementById('b-result').hidden=!done;
+  if(done){renderDone();renderAction();return;}
+  renderCourt();renderList();renderSubmit();renderAction();const rb=document.getElementById('b-reset');rb.disabled=!pick.length;if(!pick.length)bResetArm(false);}
 let bResetT=null;
 function bResetArm(on){const b=document.getElementById('b-reset');clearTimeout(bResetT);b.classList.toggle('warn',on);b.textContent=on?'Confirmar?':'Limpar equipa';if(on)bResetT=setTimeout(()=>bResetArm(false),3000);}
 document.getElementById('b-reset').addEventListener('click',()=>{
@@ -112,46 +116,48 @@ function valid(p){if(!Array.isArray(p)||p.length!==7||!p.every(id=>BY.has(id)))r
 const teamPts=ids=>ids.reduce((a,id)=>a+pts(id),0);
 
 // ---- submeter ----
-const dlg=document.getElementById('confirm');
-document.getElementById('submit').addEventListener('click',()=>{
-  document.getElementById('c-list').innerHTML=pick.map(id=>{const p=BY.get(id);return `${p.pos} · ${esc(p.name)} (${m(p.price)} M)`}).join('<br>')+`<br>Total: ${m(spent())} M`;
-  dlg.hidden=false; document.getElementById('c-yes').focus();
-});
-document.getElementById('c-no').addEventListener('click',()=>{dlg.hidden=true;});
-document.addEventListener('keydown',e=>{if(e.key==='Escape')dlg.hidden=true;});
-document.getElementById('c-yes').addEventListener('click',async()=>{
-  const yes=document.getElementById('c-yes'); yes.disabled=true;
+let submitting=false;
+document.getElementById('submit').addEventListener('click',async()=>{
+  if(submitting||!valid(pick)) return; submitting=true;
+  const btn=document.getElementById('submit'); btn.disabled=true;
   const team={n:'',p:[...pick]};
   const {data,error}=await sb.rpc('pontuar_equipa',{p_epoca:EPOCA,p_jogadores:team.p});
-  yes.disabled=false; dlg.hidden=true;
-  if(error){const s=document.getElementById('submitmsg');s.className='msg err';s.textContent='Não deu para submeter: '+errMsg(error);return;}
+  submitting=false;
+  if(error){btn.disabled=false;const s=document.getElementById('submitmsg');s.className='msg err';s.textContent='Não deu para submeter: '+errMsg(error);return;}
   const map={}; (data||[]).forEach(r=>{map[r.jogador_id]=Number(r.pontos);});
   current={...team,pts:map,added:null};
   store.set('lu25-current',current);
-  go('resultado');
-});
-document.getElementById('newteam').addEventListener('click',()=>{
-  pick=[]; store.set('lu25-draft',pick);
-  current=null; store.set('lu25-current',null); go('montar');
+  renderAll(); window.scrollTo(0,0);
 });
 
-// ---- resultado da equipa ----
-function renderResults(){
-  if(!current) return;
+// ---- resultado da equipa (no próprio ecrã, como no modo rápido) ----
+function renderDone(){
   Object.entries(current.pts||{}).forEach(([k,v])=>PTS.set(Number(k),v));
-  const tot=teamPts(current.p);
-  document.getElementById('r-name').textContent=(current.added&&current.n)||'A tua equipa';
-  document.getElementById('r-score').textContent=n0(tot);
-  const rows=current.p.map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos));
-  document.getElementById('r-team').innerHTML=`<thead><tr><th class="l">Jogador</th><th>Preço</th><th>Pontos</th></tr></thead><tbody>${rows.map(p=>`<tr><td class="l"><span class="pos ${p.pos}">${p.pos}</span> ${esc(p.name)}<div class="dim" style="font-size:12px">${esc(p.team)}</div></td><td>${m(p.price)}</td><td><b>${n0(pts(p.id))}</b></td></tr>`).join('')}</tbody><tfoot><tr><td class="l"><b>Total</b></td><td>${m(rows.reduce((a,p)=>a+p.price,0))}</td><td><b>${n0(tot)}</b></td></tr></tfoot>`;
-  const sh=document.getElementById('r-share');
-  if(current.added){
-    sh.innerHTML=`<p style="margin:0"><b>No ranking</b> · ${current.added.posicao}.º lugar quando foi registada.</p>`; return;
+  const ids={}; Object.keys(NEED).forEach(p=>ids[p]=current.p.filter(id=>BY.get(id)&&BY.get(id).pos===p));
+  const slot=(p,k)=>{const id=ids[p][k]; if(!id) return `<div class="slot"><span class="pos ${p}">${p}</span></div>`; const x=BY.get(id);
+    return `<div class="slot filled"><span class="slot-top">${badge(x.team,'sm')}<span class="pos ${p}">${p}</span></span><span class="nm">${esc(x.name)}</span><span class="dim" style="font-size:11px">${esc(x.team)}</span><span class="pr">${n0(pts(id))} pts</span></div>`;};
+  document.getElementById('court').innerHTML=`<div class="pitch" role="group" aria-label="Campo"><span class="net-l">REDE</span>
+    <div class="rowc">${slot('Z4',0)}${slot('MB',0)}${slot('OPP',0)}</div><div class="attack" style="position:relative;margin:16px -12px -18px"></div><div class="rowc back">${slot('Z4',1)}${slot('MB',1)}${slot('S',0)}</div></div>
+    <div class="bench"><div class="bt">Líbero<br><span style="text-transform:none;letter-spacing:0;font-family:var(--body);font-size:11px;opacity:.85">entra para o central de trás</span></div>${slot('L',0)}</div>`;
+  const tot=teamPts(current.p), cost=current.p.reduce((a,id)=>a+(BY.get(id)?.price||0),0);
+  const side=document.getElementById('b-result');
+  side.innerHTML=`<div class="score">${n0(tot)}</div><div class="dim">pontos fantasy em toda a época 2025/26 · equipa de ${m(cost)} M</div>
+    <div id="b-share" style="margin-top:12px"></div>
+    <p style="margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="b-again" type="button">Jogar outra vez</button><button class="btn ghost" id="b-rank" type="button">Ver ranking</button></p>`;
+  const sh=document.getElementById('b-share');
+  if(current.added) sh.innerHTML=`<p style="margin:0"><b>No ranking do Fantasy</b>${current.n?` como ${esc(current.n)}`:''} · ${current.added.posicao}.º lugar quando foi registada.</p>`;
+  else{
+    sh.innerHTML=`<h3>Pôr no ranking</h3><p class="dim" style="margin:0 0 6px;font-size:13px">Escolhe o nome que aparece no ranking.</p><div class="submitbox" style="margin-top:0"><input id="mname" maxlength="30" placeholder="Nome no ranking" aria-label="Nome no ranking"><button class="btn" id="addrank" type="button">Adicionar ao ranking</button></div><div class="msg" id="addmsg"></div>`;
+    document.getElementById('mname').value=store.get('lu25-manager')||'';
   }
-  sh.innerHTML=`<h3>Pôr no ranking</h3><div class="submitbox" style="margin-top:0"><input id="mname" maxlength="30" placeholder="Nome no ranking" aria-label="Nome no ranking"><button class="btn" id="addrank">Adicionar ao ranking</button></div><div class="msg" id="addmsg"></div>`;
-  document.getElementById('mname').value=store.get('lu25-manager')||'';
-  document.getElementById('addrank').addEventListener('click',addToRanking);
 }
+document.getElementById('b-result').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.id==='b-again'){pick=[];store.set('lu25-draft',pick);current=null;store.set('lu25-current',null);posF.clear();activePos=null;renderAll();window.scrollTo(0,0);return;}
+  if(b.id==='b-rank'){rankMode='classico';go('ranking');return;}
+  if(b.id==='addrank') addToRanking();
+});
+document.getElementById('b-result').addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='mname')addToRanking();});
 let writing=false;
 async function addToRanking(){
   const nm=document.getElementById('mname').value.trim(), msg=document.getElementById('addmsg');
@@ -162,7 +168,7 @@ async function addToRanking(){
   writing=false;
   if(error){document.getElementById('addrank').disabled=false;msg.className='msg err';msg.textContent='Não deu para guardar: '+errMsg(error);return;}
   const r=Array.isArray(data)?data[0]:data;
-  current.n=nm; current.added={id:r.id,posicao:r.posicao}; store.set('lu25-current',current); renderResults();
+  current.n=nm; current.added={id:r.id,posicao:r.posicao}; store.set('lu25-current',current); renderDone();
 }
 
 // ---- ranking ----
@@ -325,16 +331,15 @@ document.getElementById('f-reroll').addEventListener('click',()=>{
 function route(){
   if(!BY.size) return;
   let v=location.hash.slice(1); current=store.get('lu25-current');
-  if(v==='resultado'&&!current) v='montar';
+  if(v==='resultado') v='montar';
   if(!['inicio','montar','resultado','ranking','regras','rapido'].includes(v)) v='inicio';
   document.getElementById('v-home').hidden=v!=='inicio';
   document.getElementById('v-build').hidden=v!=='montar';
-  document.getElementById('v-res').hidden=v!=='resultado';
   document.getElementById('v-rank').hidden=v!=='ranking';
   document.getElementById('v-rules').hidden=v!=='regras';
   document.getElementById('v-fast').hidden=v!=='rapido';
-  document.querySelectorAll('.tabs a, .bottomnav a').forEach(a=>a.dataset.v===(v==='resultado'?'montar':v)?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
-  if(v==='inicio') renderHome(); else if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague(); else if(v==='rapido') renderFast();
+  document.querySelectorAll('.tabs a, .bottomnav a').forEach(a=>a.dataset.v===v?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  if(v==='inicio') renderHome(); else if(v==='montar') renderAll(); else if(v==='ranking') loadLeague(); else if(v==='rapido') renderFast();
   renderAction();
   window.scrollTo(0,0);
 }
@@ -364,7 +369,7 @@ async function renderHome(){
   renderHomeCrests();
   const pb=document.getElementById('h-play-build'), pf=document.getElementById('h-play-fast');
   pb.textContent=current?'Ver a minha equipa':pick.length?`Continuar (${pick.length} de 7)`:'Jogar';
-  pb.setAttribute('href',current?'#resultado':'#montar');
+  pb.setAttribute('href','#montar');
   pf.textContent=fast&&fast.phase==='pick'&&fast.picks.length?`Continuar (ronda ${fast.picks.length+1} de ${FAST_ROUNDS})`:fast&&fast.phase!=='pick'?'Continuar':'Jogar';
   if(Date.now()-homeTopAt<30000) return; homeTopAt=Date.now();
   const q=md=>sb.from('equipas').select('nome_equipa,pontos').eq('epoca',EPOCA).eq('modo',md).order('pontos',{ascending:false}).order('criada_em',{ascending:true}).limit(3);

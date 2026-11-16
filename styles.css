@@ -268,3 +268,7 @@ details.team summary{cursor:pointer}
 .hero{padding-bottom:0}
 .h-foot{text-align:center;font-size:12px;margin:14px 0 6px}
 @media (max-width:999px){.h-liga{font-size:46px}}
+/* ---- Fantasy: resultado no próprio ecrã ---- */
+#v-build.done .rules,#v-build.done .bar,#v-build.done .submitcard,#v-build.done .filters,#v-build.done #poschips,#v-build.done #lcount,#v-build.done #list{display:none}
+#v-build.done #b-head{margin-bottom:12px}
+#v-build.done .build-right{position:static;max-height:none;border:0;padding:0;background:none;box-shadow:none}
