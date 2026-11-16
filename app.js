@@ -174,7 +174,7 @@ function renderLeague(err){
   if(leagueState==='error'){el.innerHTML=`<div class="empty err">Não deu para carregar o ranking: ${esc(err||'')}</div>`;return;}
   document.querySelectorAll('#rk-modes .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===rankMode));
   const mine=rankMode==='rapido'?(fast&&fast.added?fast.added.id:null):(current&&current.added?current.added.id:null);
-  el.innerHTML=`<p style="margin:0 0 8px"><button class="btn ghost" id="reload" style="font-size:14px;padding:7px 12px">Atualizar</button></p>`+(league.length?`<table class="rk"><thead><tr><th class="l">#</th><th class="l">Equipa</th><th>Pontos</th></tr></thead><tbody>${league.map((t,i)=>`<tr class="${t.id===mine?'me':''}"><td class="l" style="vertical-align:top">${i+1}</td><td class="l"><details><summary><b>${esc(t.nome_equipa)}</b><div class="who">${esc(t.nome_treinador)}</div></summary><div class="pl">${(t.jogadores||[]).map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos)).map(p=>`<span class="pos ${p.pos}" style="min-width:28px;font-size:10px;padding:2px 4px">${p.pos}</span> ${esc(p.name)} <span style="opacity:.75">· ${esc(p.team)} · ${m(p.price)} M</span>`).join('<br>')}</div></details></td><td style="vertical-align:top"><b>${n0(Number(t.pontos))}</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Ainda não há equipas no ranking.</div>');
+  el.innerHTML=`<p style="margin:0 0 8px"><button class="btn ghost" id="reload" style="font-size:14px;padding:7px 12px">Atualizar</button></p>`+(league.length?`<table class="rk"><thead><tr><th class="l">#</th><th class="l">Equipa</th><th>Pontos</th></tr></thead><tbody>${league.map((t,i)=>`<tr class="${t.id===mine?'me':''}"><td class="l" style="vertical-align:top">${i+1}</td><td class="l"><details><summary><b>${esc(t.nome_equipa)}</b>${rankMode==='rapido'&&t.nome_equipa===t.nome_treinador?'':`<div class="who">${esc(t.nome_treinador)}</div>`}</summary><div class="pl">${(t.jogadores||[]).map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos)).map(p=>`<span class="pos ${p.pos}" style="min-width:28px;font-size:10px;padding:2px 4px">${p.pos}</span> ${esc(p.name)} <span style="opacity:.75">· ${esc(p.team)} · ${m(p.price)} M</span>`).join('<br>')}</div></details></td><td style="vertical-align:top"><b>${n0(Number(t.pontos))}</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Ainda não há equipas no ranking.</div>');
   document.getElementById('reload').addEventListener('click',loadLeague);
 }
 
@@ -220,19 +220,17 @@ function renderFast(){
     side.innerHTML=`<h3>Escolhe um jogador</h3><p class="dim" style="margin:0;font-size:13px">7 rondas, 6 jogadores ao calhas em cada uma. O que escolheres vai para o campo. Sem orçamento: o valor é só uma referência. Podes trocar os 6 jogadores ${FAST_REROLLS} vezes por jogo.</p>
       <div class="offer">${fast.offer.map(id=>{const p=BY.get(id);return `<button type="button" class="pc" data-pick="${id}"><span class="pos ${p.pos}">${p.pos}</span><span><span class="nm">${esc(p.name)}</span><span class="tm">${esc(p.team)}</span></span><span class="vl">${m(p.price)}<small>VALOR</small></span></button>`;}).join('')}</div>`;
   } else if(fast.phase==='name'){
-    side.innerHTML=`<h3>Equipa completa</h3><p class="dim" style="margin:0 0 10px;font-size:13px">Dá um nome à equipa para veres os pontos que fez em toda a época 2025/26.</p>
-      <div class="submitbox" style="margin-top:0"><input id="f-name" maxlength="30" placeholder="Nome da tua equipa" aria-label="Nome da tua equipa"><button class="btn" id="f-score" type="button">Ver pontos</button></div><div class="msg" id="f-msg"></div>
-      <p style="margin:12px 0 0"><button class="btn ghost" id="f-restart" type="button">Recomeçar</button></p>`;
-    document.getElementById('f-name').value=fast.n||'';
+    side.innerHTML=`<h3>Equipa completa</h3><p class="dim" style="margin:0 0 10px;font-size:13px">Submete para veres os pontos que esta equipa fez em toda a época 2025/26.</p>
+      <p style="margin:0;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="f-score" type="button">Submeter</button><button class="btn ghost" id="f-restart" type="button">Recomeçar</button></p><div class="msg" id="f-msg"></div>`;
   } else {
     const tot=fast.picks.reduce((a,id)=>a+(fast.pts[id]??0),0);
-    side.innerHTML=`<div class="dim">${esc(fast.n)}</div><div class="score">${n0(tot)}</div><div class="dim">pontos fantasy em toda a época 2025/26</div>
+    side.innerHTML=`<div class="score">${n0(tot)}</div><div class="dim">pontos fantasy em toda a época 2025/26</div>
       <div id="f-share" style="margin-top:12px"></div>
       <p style="margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="f-again" type="button">Jogar outra vez</button><button class="btn ghost" id="f-rank" type="button">Ver ranking</button></p>`;
     const sh=document.getElementById('f-share');
-    if(fast.added) sh.innerHTML=`<p style="margin:0"><b>No ranking do modo rápido</b> · ${fast.added.posicao}.º lugar quando foi registada.</p>`;
+    if(fast.added) sh.innerHTML=`<p style="margin:0"><b>No ranking do modo rápido</b> como ${esc(fast.n)} · ${fast.added.posicao}.º lugar quando foi registada.</p>`;
     else{
-      sh.innerHTML=`<h3>Pôr no ranking</h3><div class="submitbox" style="margin-top:0"><input id="f-mname" maxlength="30" placeholder="O teu nome" aria-label="O teu nome"><button class="btn" id="f-add" type="button">Adicionar ao ranking</button></div><div class="msg" id="f-addmsg"></div>`;
+      sh.innerHTML=`<h3>Pôr no ranking</h3><p class="dim" style="margin:0 0 6px;font-size:13px">Escolhe o nome que aparece no ranking.</p><div class="submitbox" style="margin-top:0"><input id="f-mname" maxlength="30" placeholder="Nome no ranking" aria-label="Nome no ranking"><button class="btn" id="f-add" type="button">Adicionar ao ranking</button></div><div class="msg" id="f-addmsg"></div>`;
       document.getElementById('f-mname').value=store.get('lu25-manager')||'';
     }
   }
@@ -245,18 +243,17 @@ document.getElementById('f-side').addEventListener('click',async e=>{
   if(b.id==='f-restart'||b.id==='f-again'){fastNew();window.scrollTo(0,0);return;}
   if(b.id==='f-rank'){rankMode='rapido';go('ranking');return;}
   if(b.id==='f-score'){
-    const nm=document.getElementById('f-name').value.trim(), msg=document.getElementById('f-msg');
-    if(nm.length<2){msg.className='msg err';msg.textContent='Dá um nome à equipa (2 a 30 caracteres).';return;}
-    b.disabled=true; fast.n=nm;
+    const msg=document.getElementById('f-msg');
+    b.disabled=true;
     const {data,error}=await sb.rpc('pontuar_rapido',{p_epoca:EPOCA,p_jogadores:fast.picks});
     if(error){b.disabled=false;msg.className='msg err';msg.textContent='Não deu para calcular: '+errMsg(error);return;}
     fast.pts={}; (data||[]).forEach(r=>{fast.pts[r.jogador_id]=Number(r.pontos);});
     fast.phase='result'; fastSave(); renderFast(); return;}
   if(b.id==='f-add'){
     const nm=document.getElementById('f-mname').value.trim(), msg=document.getElementById('f-addmsg');
-    if(nm.length<2){msg.className='msg err';msg.textContent='Escreve o teu nome (2 a 30 caracteres).';return;}
-    b.disabled=true; store.set('lu25-manager',nm);
-    const {data,error}=await sb.rpc('guardar_equipa_rapido',{p_epoca:EPOCA,p_nome_equipa:fast.n,p_nome_treinador:nm,p_jogadores:fast.picks});
+    if(nm.length<2){msg.className='msg err';msg.textContent='Escreve um nome (2 a 30 caracteres).';return;}
+    b.disabled=true; store.set('lu25-manager',nm); fast.n=nm;
+    const {data,error}=await sb.rpc('guardar_equipa_rapido',{p_epoca:EPOCA,p_nome_equipa:nm,p_nome_treinador:nm,p_jogadores:fast.picks});
     if(error){b.disabled=false;msg.className='msg err';msg.textContent='Não deu para guardar: '+errMsg(error);return;}
     const r=Array.isArray(data)?data[0]:data; fast.added={id:r.id,posicao:r.posicao}; fastSave(); renderFast(); return;}
 });
