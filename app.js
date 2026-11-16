@@ -56,7 +56,7 @@ document.getElementById('court').addEventListener('click',e=>{
 function renderList(){
   const q=document.getElementById('q').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   const mpSel=document.getElementById('maxp'), left=Math.max(0,BUDGET-spent());
-  const bo=mpSel.querySelector('option[value="budget"]'); if(bo) bo.textContent=`Até ao que tenho disponível (${m(left)} M)`;
+  const bo=mpSel.querySelector('option[value="budget"]'); if(bo) bo.textContent=`Mostrar jogadores acessíveis (${m(left)}M)`;
   const t=teamSel.value, so=document.getElementById('sort').value, mx=mpSel.value==='budget'?left+1e-9:(parseFloat(mpSel.value)||Infinity);
   const pf=activePos?new Set([activePos]):posF;
   chips.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p==='ALL'?!pf.size:pf.has(b.dataset.p)));
