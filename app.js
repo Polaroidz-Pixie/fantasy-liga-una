@@ -202,7 +202,12 @@ const CLUBS={'Benfica':['BEN','#c8102e'],'Sporting':['SCP','#00804a'],'Vitória 
  'Académica de Espinho':['AAE','#3f4a8a'],'Sporting de Espinho':['SCE','#1f6f8b'],'São Mamede':['SMA','#7a4fa0'],'Castêlo da Maia':['CMA','#c48a12'],
  'Kairós':['KAI','#0e8f86'],'Madalena':['MAD','#9c2f6b'],'Ala Gondomar':['GON','#4b7d2a'],'Santo Tirso':['STI','#b5562a'],'Oeiras':['OEI','#2f5fb3']};
 function club(team){const t=String(team||'').split(' / ')[0];const c=CLUBS[t];if(c)return c;const ab=t.split(/\s+/).filter(w=>w.length>2).map(w=>w[0]).join('').slice(0,3).toUpperCase()||'?';return [ab,'#5e6a73'];}
-const badge=(team,cls='')=>{const [ab,col]=club(team);return `<span class="cb ${cls}" style="background:${col}" title="${esc(team)}" aria-hidden="true">${ab}</span>`;};
+// Se existir um ficheiro de emblema em escudos/ (listado em escudos/index.json, ex.: {"BEN":"BEN.png"}), usa-o; senão, a sigla
+let CRESTS={};
+fetch('escudos/index.json',{cache:'no-cache'}).then(r=>r.ok?r.json():{}).then(j=>{if(j&&typeof j==='object'){CRESTS=j;if(fast&&!document.getElementById('v-fast').hidden)renderFast();}}).catch(()=>{});
+const badge=(team,cls='')=>{const [ab,col]=club(team);const f=CRESTS[ab];
+  if(f&&/^[A-Za-z0-9_-]+\.(png|svg|webp|jpg)$/.test(f)) return `<img class="cb img ${cls}" src="escudos/${f}" alt="" title="${esc(team)}" loading="lazy">`;
+  return `<span class="cb ${cls}" style="background:${col}" title="${esc(team)}" aria-hidden="true">${ab}</span>`;};
 function histShort(h){const m2=String(h||'').match(/^([\d,]+) pts\/jogo em (\d+) jogos \((.+)\)$/);
   if(m2) return `<b>${m2[1]}</b> pts/jogo <span class="hy">· ${m2[2]} jogos em ${esc(m2[3])}</span>`;
   return /^Novo/.test(h||'')?'Novo na Liga':'Sem jogos nas épocas anteriores';}
