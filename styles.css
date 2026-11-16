@@ -18,8 +18,12 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body)}
 header{background:#15212b;color:#fff;padding:16px 18px 14px}
-header h1{font:700 26px/1 var(--display);text-transform:uppercase;letter-spacing:.02em;margin:0}
-header h1 span{color:#f07a42}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:50px;height:50px;flex-shrink:0}
+header h1{margin:0;text-transform:uppercase;display:flex;flex-direction:column;gap:3px}
+header h1 .b-fantasy{font:600 12px/1 var(--display);letter-spacing:.32em;color:#6aa8dc}
+header h1 .b-liga{font:700 28px/.9 var(--display);letter-spacing:.01em;color:#fff}
+header h1 .b-liga span{color:#f07a42}
 header p{margin:6px 0 0;color:#c7d0d6;font-size:13px}
 .tabs{display:flex;gap:2px;margin:12px 0 -14px;overflow-x:auto}
 .tabs a{white-space:nowrap}.tabs{scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}

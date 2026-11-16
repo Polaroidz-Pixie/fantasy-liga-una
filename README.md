@@ -15,6 +15,7 @@ Site estático, sem build:
 - `vendor/supabase.js`: cliente `@supabase/supabase-js` (UMD, v2.119.0), servido localmente.
 - `fonts/`: Barlow Condensed e IBM Plex Sans (via @fontsource, licença OFL).
 - `vercel.json`: cabeçalhos de segurança; a CSP só permite ligações ao projeto Supabase.
+- `icons/` e `manifest.webmanifest`: emblema da marca (bola laranja com estrela azul), favicon e ícones para instalar no telemóvel.
 
 ## Base de dados
 
