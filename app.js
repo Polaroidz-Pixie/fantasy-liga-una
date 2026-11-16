@@ -338,15 +338,21 @@ function route(){
   renderAction();
   window.scrollTo(0,0);
 }
-// A navegação entre separadores substitui a entrada atual do histórico em vez de criar novas:
-// assim o botão de recuar do telemóvel/browser sai da app em vez de voltar ao separador anterior.
-function go(v){ history.replaceState(null,'','#'+v); route(); }
+// Histórico: o Início fica sempre por baixo. De qualquer secção, recuar volta ao Início;
+// no Início, recuar sai da app. Entre secções substitui-se a entrada (não se acumula histórico).
+const inSub=()=>!!(history.state&&history.state.sub);
+function go(v){
+  if(v==='inicio'){ if(inSub()){history.back();return;} history.replaceState(null,'','#inicio'); route(); return; }
+  if(inSub()) history.replaceState({sub:1},'','#'+v); else history.pushState({sub:1},'','#'+v);
+  route();
+}
 document.addEventListener('click',e=>{
   const a=e.target.closest('a[href^="#"]'); if(!a||e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
   const v=a.getAttribute('href').slice(1); if(!v) return;
   e.preventDefault(); go(v);
 });
-window.addEventListener('hashchange',route);
+window.addEventListener('popstate',route);
+window.addEventListener('hashchange',()=>{ if(!inSub()&&location.hash.slice(1)&&location.hash!=='#inicio'){const v=location.hash.slice(1);history.replaceState(null,'','#inicio');history.pushState({sub:1},'','#'+v);} route(); });
 
 // ---- início ----
 function renderHomeCrests(){
@@ -385,5 +391,7 @@ document.getElementById('h-top').addEventListener('click',e=>{const a=e.target.c
   pick=(store.get('lu25-draft')||[]).filter(id=>BY.has(id));
   current=store.get('lu25-current'); if(current&&!valid(current.p)) current=null;
   fast=store.get('lu25-fast');
-  fillTeams(); boot.remove(); route();
+  fillTeams(); boot.remove();
+  { const v=location.hash.slice(1); if(v&&v!=='inicio'&&!inSub()){ history.replaceState(null,'','#inicio'); history.pushState({sub:1},'','#'+v); } }
+  route();
 })();
