@@ -228,6 +228,7 @@ function renderFast(){
   const done=fast.picks.length, round=Math.min(done+1,FAST_ROUNDS);
   document.getElementById('f-round').textContent=fast.phase==='pick'?`Ronda ${round} de ${FAST_ROUNDS}`:(fast.phase==='name'?'Equipa completa':'Resultado');
   document.getElementById('f-segs').innerHTML=Array.from({length:FAST_ROUNDS},(_,i)=>`<i class="${i<done?'done':(i===done&&fast.phase==='pick'?'now':'')}"></i>`).join('');
+  const rs=document.getElementById('f-reset'); rs.hidden=fast.phase!=='pick'; rs.disabled=!fast.picks.length; if(!fast.picks.length)resetArm(false);
   const rr=document.getElementById('f-reroll'); rr.hidden=fast.phase!=='pick'; rr.disabled=fast.rerolls<=0; document.getElementById('f-rr').textContent=fast.rerolls;
   fastCourt();
   const side=document.getElementById('f-side');
@@ -271,6 +272,13 @@ document.getElementById('f-side').addEventListener('click',async e=>{
     const {data,error}=await sb.rpc('guardar_equipa_rapido',{p_epoca:EPOCA,p_nome_equipa:nm,p_nome_treinador:nm,p_jogadores:fast.picks});
     if(error){b.disabled=false;msg.className='msg err';msg.textContent='Não deu para guardar: '+errMsg(error);return;}
     const r=Array.isArray(data)?data[0]:data; fast.added={id:r.id,posicao:r.posicao}; fastSave(); renderFast(); return;}
+});
+let resetT=null;
+function resetArm(on){const b=document.getElementById('f-reset');clearTimeout(resetT);b.classList.toggle('warn',on);b.textContent=on?'Confirmar?':'Recomeçar';if(on)resetT=setTimeout(()=>resetArm(false),3000);}
+document.getElementById('f-reset').addEventListener('click',()=>{
+  const b=document.getElementById('f-reset');
+  if(!b.classList.contains('warn')){resetArm(true);return;}
+  resetArm(false);fastNew();window.scrollTo(0,0);
 });
 document.getElementById('f-reroll').addEventListener('click',()=>{
   if(!fast||fast.phase!=='pick'||fast.rerolls<=0) return;

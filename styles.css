@@ -190,6 +190,8 @@ details.team summary{cursor:pointer}
 .fast-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:4px}
 .fh-k{font:600 12px/1 var(--display);letter-spacing:.28em;text-transform:uppercase;color:var(--net)}
 .fast-head h2{font-size:30px;margin:4px 0 0}
+.fh-btns{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+#f-reset.warn{border-color:#c0392b;color:#c0392b}
 .rr{display:inline-block;min-width:22px;margin-left:6px;padding:3px 6px;border-radius:5px;background:var(--ink);color:var(--bg);font-size:14px}
 .segs{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;margin:12px 0}
 .segs i{height:6px;border-radius:3px;background:var(--line)}
