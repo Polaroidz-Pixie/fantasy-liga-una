@@ -33,7 +33,7 @@ Object.keys(POSL).forEach(k=>chips.insertAdjacentHTML('beforeend',`<button type=
 chips.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;const k=b.dataset.p;if(k==='ALL')posF.clear();else posF.has(k)?posF.delete(k):posF.add(k);activePos=null;renderAll();});
 ['q','team','sort','maxp'].forEach(id=>document.getElementById(id).addEventListener('input',renderList));
 document.getElementById('tname').value=store.get('lu25-name')||'';
-document.getElementById('tname').addEventListener('input',e=>{store.set('lu25-name',e.target.value);renderSubmit();});
+document.getElementById('tname').addEventListener('input',e=>{store.set('lu25-name',e.target.value);renderSubmit();renderAction();});
 
 function renderCourt(){
   // 5-1 clássico: rede em cima; à frente zona 4, central e oposto; atrás zona 4, central e distribuidor; líbero entra para o central de trás
@@ -71,10 +71,10 @@ function renderList(){
       <button class="add${on?' rm':''}" data-id="${p.id}" ${!on&&!ok?'disabled':''} title="${why}">${on?'Retirar':ok?'Escolher':why==='Posição completa'?'Completa':'Caro'}</button></div>`;
   }).join('')||'<div class="empty">Nenhum jogador com estes filtros.</div>';
 }
-document.getElementById('list').addEventListener('click',e=>{const b=e.target.closest('button[data-id]');if(b&&!b.disabled)toggle(+b.dataset.id);});
+document.getElementById('list').addEventListener('click',e=>{const b=e.target.closest('button[data-id]')||e.target.closest('.row')?.querySelector('button[data-id]');if(b&&!b.disabled)toggle(+b.dataset.id);});
 function toggle(id){
   const i=pick.indexOf(id);
-  if(i>=0)pick.splice(i,1); else{const p=BY.get(id); if(!canAdd(p))return; pick.push(id); if(activePos&&countPos(activePos)>=NEED[activePos])activePos=null;}
+  if(i>=0)pick.splice(i,1); else{const p=BY.get(id); if(!canAdd(p))return; pick.push(id); if(activePos&&countPos(activePos)>=NEED[activePos]){activePos=null; if(window.innerWidth<1000) setTimeout(()=>document.getElementById('court').scrollIntoView({behavior:'smooth',block:'start'}),0);}}
   store.set('lu25-draft',pick); renderAll();
 }
 function renderSubmit(){
@@ -83,7 +83,23 @@ function renderSubmit(){
   const left=7-pick.length;
   document.getElementById('submitmsg').textContent=ok?'Pronto. Confirma a equipa antes de submeter.':left>0?`Faltam ${left} jogador${left===1?'':'es'}.`:'Dá um nome à equipa (2 a 30 caracteres).';
 }
-function renderAll(){renderCourt();renderList();renderSubmit();}
+function renderAction(){
+  const ab=document.getElementById('actionbar'), onBuild=!document.getElementById('v-build').hidden;
+  ab.hidden=!onBuild; document.body.classList.toggle('has-action',onBuild);
+  if(!onBuild) return;
+  const left=BUDGET-spent(), mo=document.getElementById('ab-money');
+  mo.textContent=`${m(left)} M`; mo.className=left<-1e-9?'over':'';
+  const falta=7-pick.length;
+  document.getElementById('ab-count').textContent=`disponíveis · ${pick.length} de 7 jogadores`;
+  const go=document.getElementById('ab-go');
+  go.disabled=falta>0; go.textContent=falta>0?`Faltam ${falta}`:'Continuar';
+}
+document.getElementById('ab-go').addEventListener('click',()=>{
+  const tn=document.getElementById('tname');
+  if(tn.value.trim().length>=2&&!document.getElementById('submit').disabled){document.getElementById('submit').click();return;}
+  document.querySelector('.submitcard').scrollIntoView({behavior:'smooth',block:'center'}); setTimeout(()=>tn.focus({preventScroll:true}),350);
+});
+function renderAll(){renderCourt();renderList();renderSubmit();renderAction();}
 
 // ---- estado ----
 let current=null;   // equipa acabada de submeter {n,p,pts:{id:pontos},added:{id,posicao}|null}
@@ -203,8 +219,9 @@ function route(){
   document.getElementById('v-res').hidden=v!=='resultado';
   document.getElementById('v-rank').hidden=v!=='ranking';
   document.getElementById('v-rules').hidden=v!=='regras';
-  document.querySelectorAll('.tabs a').forEach(a=>a.dataset.v===(v==='resultado'?'montar':v)?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
+  document.querySelectorAll('.tabs a, .bottomnav a').forEach(a=>a.dataset.v===(v==='resultado'?'montar':v)?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
   if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague();
+  renderAction();
   window.scrollTo(0,0);
 }
 // A navegação entre separadores substitui a entrada atual do histórico em vez de criar novas:

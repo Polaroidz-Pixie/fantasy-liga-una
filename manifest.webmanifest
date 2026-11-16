@@ -5,6 +5,7 @@
   "lang": "pt-PT",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#f4f2ee",
   "theme_color": "#15212b",
   "icons": [
