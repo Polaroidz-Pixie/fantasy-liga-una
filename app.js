@@ -103,7 +103,7 @@ function renderAll(){renderCourt();renderList();renderSubmit();renderAction();}
 
 // ---- estado ----
 let current=null;   // equipa acabada de submeter {n,p,pts:{id:pontos},added:{id,posicao}|null}
-let league=[], leagueState='idle';
+let league=[], leagueState='idle', rankMode='classico';
 function valid(p){if(!Array.isArray(p)||p.length!==7||!p.every(id=>BY.has(id)))return false;const c={};p.forEach(id=>{const x=BY.get(id).pos;c[x]=(c[x]||0)+1});return Object.keys(NEED).every(k=>c[k]===NEED[k])&&p.reduce((a,id)=>a+BY.get(id).price,0)<=BUDGET+1e-9;}
 const teamPts=ids=>ids.reduce((a,id)=>a+pts(id),0);
 
@@ -164,7 +164,7 @@ async function addToRanking(){
 // ---- ranking ----
 async function loadLeague(){
   leagueState='loading'; renderLeague();
-  const {data,error}=await sb.from('equipas').select('id,nome_equipa,nome_treinador,jogadores,pontos,criada_em').eq('epoca',EPOCA).order('pontos',{ascending:false}).order('criada_em',{ascending:true}).limit(500);
+  const {data,error}=await sb.from('equipas').select('id,nome_equipa,nome_treinador,jogadores,pontos,criada_em').eq('epoca',EPOCA).eq('modo',rankMode).order('pontos',{ascending:false}).order('criada_em',{ascending:true}).limit(500);
   if(error){leagueState='error';league=[];renderLeague(errMsg(error));return;}
   league=data||[]; leagueState='ok'; renderLeague();
 }
@@ -172,10 +172,98 @@ function renderLeague(err){
   const el=document.getElementById('r-league');
   if(leagueState==='loading'){el.innerHTML='<div class="empty">A carregar o ranking…</div>';return;}
   if(leagueState==='error'){el.innerHTML=`<div class="empty err">Não deu para carregar o ranking: ${esc(err||'')}</div>`;return;}
-  const mine=current&&current.added?current.added.id:null;
+  document.querySelectorAll('#rk-modes .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.m===rankMode));
+  const mine=rankMode==='rapido'?(fast&&fast.added?fast.added.id:null):(current&&current.added?current.added.id:null);
   el.innerHTML=`<p style="margin:0 0 8px"><button class="btn ghost" id="reload" style="font-size:14px;padding:7px 12px">Atualizar</button></p>`+(league.length?`<table class="rk"><thead><tr><th class="l">#</th><th class="l">Equipa</th><th>Pontos</th></tr></thead><tbody>${league.map((t,i)=>`<tr class="${t.id===mine?'me':''}"><td class="l" style="vertical-align:top">${i+1}</td><td class="l"><details><summary><b>${esc(t.nome_equipa)}</b><div class="who">${esc(t.nome_treinador)}</div></summary><div class="pl">${(t.jogadores||[]).map(id=>BY.get(id)).filter(Boolean).sort((a,b)=>SLOTS.indexOf(a.pos)-SLOTS.indexOf(b.pos)).map(p=>`<span class="pos ${p.pos}" style="min-width:28px;font-size:10px;padding:2px 4px">${p.pos}</span> ${esc(p.name)} <span style="opacity:.75">· ${esc(p.team)} · ${m(p.price)} M</span>`).join('<br>')}</div></details></td><td style="vertical-align:top"><b>${n0(Number(t.pontos))}</b></td></tr>`).join('')}</tbody></table>`:'<div class="empty">Ainda não há equipas no ranking.</div>');
   document.getElementById('reload').addEventListener('click',loadLeague);
 }
+
+document.getElementById('rk-modes').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b||b.dataset.m===rankMode)return;rankMode=b.dataset.m;loadLeague();});
+
+// ---- modo rápido: 7 rondas, 6 jogadores ao calhas, escolhe 1 por ronda ----
+const FAST_ROUNDS=7, FAST_CHOICES=6, FAST_REROLLS=2;
+let fast=null;   // {picks:[ids], offer:[ids], rerolls, phase:'pick'|'name'|'result', n, pts:{id:pontos}, added}
+const rnd=n=>{const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n;};
+function shuffle(arr){for(let i=arr.length-1;i>0;i--){const j=rnd(i+1);[arr[i],arr[j]]=[arr[j],arr[i]];}return arr;}
+function fastOpen(){const c={};fast.picks.forEach(id=>{const p=BY.get(id).pos;c[p]=(c[p]||0)+1});return Object.keys(NEED).filter(p=>(c[p]||0)<NEED[p]);}
+function fastDeal(avoid){
+  // só posições que ainda têm lugar livre; nunca jogadores já escolhidos; ao trocar, evita repetir os 6 anteriores
+  const open=new Set(fastOpen());
+  let pool=P.filter(p=>open.has(p.pos)&&!fast.picks.includes(p.id));
+  const fresh=pool.filter(p=>!(avoid||[]).includes(p.id));
+  if(fresh.length>=FAST_CHOICES) pool=fresh;
+  fast.offer=shuffle(pool.map(p=>p.id)).slice(0,FAST_CHOICES);
+}
+function fastSave(){store.set('lu25-fast',fast);}
+function fastNew(){fast={picks:[],offer:[],rerolls:FAST_REROLLS,phase:'pick',n:'',pts:null,added:null};fastDeal();fastSave();renderFast();}
+function fastValid(){return fast&&Array.isArray(fast.picks)&&fast.picks.every(id=>BY.has(id))&&Array.isArray(fast.offer)&&fast.offer.every(id=>BY.has(id));}
+function fastCourt(){
+  const ids={}; Object.keys(NEED).forEach(p=>ids[p]=fast.picks.filter(id=>BY.get(id).pos===p));
+  const open=new Set(fast.phase==='pick'?fast.offer.map(id=>BY.get(id).pos):[]);
+  const slot=(p,k)=>{const id=ids[p][k];
+    if(id){const x=BY.get(id), pt=fast.phase==='result'&&fast.pts?`<span class="pr">${n0(fast.pts[id]??0)} pts</span>`:`<span class="pr">${m(x.price)} M</span>`;
+      return `<div class="slot filled"><span class="pos ${p}">${p}</span><span class="nm">${esc(x.name)}</span><span class="dim" style="font-size:11px">${esc(x.team)}</span>${pt}</div>`;}
+    return `<div class="slot ${open.has(p)?'next':''}"><span class="pos ${p}">${p}</span><span>${POSL[p]}</span></div>`;};
+  document.getElementById('f-court').innerHTML=`<div class="pitch" role="group" aria-label="Campo"><span class="net-l">REDE</span>
+    <div class="rowc">${slot('Z4',0)}${slot('MB',0)}${slot('OPP',0)}</div><div class="attack" style="position:relative;margin:16px -12px -18px"></div><div class="rowc back">${slot('Z4',1)}${slot('MB',1)}${slot('S',0)}</div></div>
+    <div class="bench"><div class="bt">Líbero<br><span style="text-transform:none;letter-spacing:0;font-family:var(--body);font-size:11px;opacity:.85">entra para o central de trás</span></div>${slot('L',0)}</div>`;
+}
+function renderFast(){
+  if(!fast||!fastValid()){fastNew();return;}
+  const done=fast.picks.length, round=Math.min(done+1,FAST_ROUNDS);
+  document.getElementById('f-round').textContent=fast.phase==='pick'?`Ronda ${round} de ${FAST_ROUNDS}`:(fast.phase==='name'?'Equipa completa':'Resultado');
+  document.getElementById('f-segs').innerHTML=Array.from({length:FAST_ROUNDS},(_,i)=>`<i class="${i<done?'done':(i===done&&fast.phase==='pick'?'now':'')}"></i>`).join('');
+  const rr=document.getElementById('f-reroll'); rr.hidden=fast.phase!=='pick'; rr.disabled=fast.rerolls<=0; document.getElementById('f-rr').textContent=fast.rerolls;
+  fastCourt();
+  const side=document.getElementById('f-side');
+  if(fast.phase==='pick'){
+    side.innerHTML=`<h3>Escolhe um jogador</h3><p class="dim" style="margin:0;font-size:13px">7 rondas, 6 jogadores ao calhas em cada uma. O que escolheres vai para o campo. Sem orçamento: o valor é só uma referência. Podes trocar os 6 jogadores ${FAST_REROLLS} vezes por jogo.</p>
+      <div class="offer">${fast.offer.map(id=>{const p=BY.get(id);return `<button type="button" class="pc" data-pick="${id}"><span class="pos ${p.pos}">${p.pos}</span><span><span class="nm">${esc(p.name)}</span><span class="tm">${esc(p.team)}</span></span><span class="vl">${m(p.price)}<small>VALOR</small></span></button>`;}).join('')}</div>`;
+  } else if(fast.phase==='name'){
+    side.innerHTML=`<h3>Equipa completa</h3><p class="dim" style="margin:0 0 10px;font-size:13px">Dá um nome à equipa para veres os pontos que fez em toda a época 2025/26.</p>
+      <div class="submitbox" style="margin-top:0"><input id="f-name" maxlength="30" placeholder="Nome da tua equipa" aria-label="Nome da tua equipa"><button class="btn" id="f-score" type="button">Ver pontos</button></div><div class="msg" id="f-msg"></div>
+      <p style="margin:12px 0 0"><button class="btn ghost" id="f-restart" type="button">Recomeçar</button></p>`;
+    document.getElementById('f-name').value=fast.n||'';
+  } else {
+    const tot=fast.picks.reduce((a,id)=>a+(fast.pts[id]??0),0);
+    side.innerHTML=`<div class="dim">${esc(fast.n)}</div><div class="score">${n0(tot)}</div><div class="dim">pontos fantasy em toda a época 2025/26</div>
+      <div id="f-share" style="margin-top:12px"></div>
+      <p style="margin:14px 0 0;display:flex;gap:8px;flex-wrap:wrap"><button class="btn" id="f-again" type="button">Jogar outra vez</button><button class="btn ghost" id="f-rank" type="button">Ver ranking</button></p>`;
+    const sh=document.getElementById('f-share');
+    if(fast.added) sh.innerHTML=`<p style="margin:0"><b>No ranking do modo rápido</b> · ${fast.added.posicao}.º lugar quando foi registada.</p>`;
+    else{
+      sh.innerHTML=`<h3>Pôr no ranking</h3><div class="submitbox" style="margin-top:0"><input id="f-mname" maxlength="30" placeholder="O teu nome" aria-label="O teu nome"><button class="btn" id="f-add" type="button">Adicionar ao ranking</button></div><div class="msg" id="f-addmsg"></div>`;
+      document.getElementById('f-mname').value=store.get('lu25-manager')||'';
+    }
+  }
+}
+document.getElementById('f-side').addEventListener('click',async e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.pick){const id=+b.dataset.pick; if(fast.phase!=='pick'||!fast.offer.includes(id))return;
+    fast.picks.push(id); if(fast.picks.length>=FAST_ROUNDS){fast.phase='name';fast.offer=[];} else fastDeal();
+    fastSave(); renderFast(); if(window.innerWidth<1000) document.getElementById('f-court').scrollIntoView({behavior:'smooth',block:'start'}); return;}
+  if(b.id==='f-restart'||b.id==='f-again'){fastNew();window.scrollTo(0,0);return;}
+  if(b.id==='f-rank'){rankMode='rapido';go('ranking');return;}
+  if(b.id==='f-score'){
+    const nm=document.getElementById('f-name').value.trim(), msg=document.getElementById('f-msg');
+    if(nm.length<2){msg.className='msg err';msg.textContent='Dá um nome à equipa (2 a 30 caracteres).';return;}
+    b.disabled=true; fast.n=nm;
+    const {data,error}=await sb.rpc('pontuar_rapido',{p_epoca:EPOCA,p_jogadores:fast.picks});
+    if(error){b.disabled=false;msg.className='msg err';msg.textContent='Não deu para calcular: '+errMsg(error);return;}
+    fast.pts={}; (data||[]).forEach(r=>{fast.pts[r.jogador_id]=Number(r.pontos);});
+    fast.phase='result'; fastSave(); renderFast(); return;}
+  if(b.id==='f-add'){
+    const nm=document.getElementById('f-mname').value.trim(), msg=document.getElementById('f-addmsg');
+    if(nm.length<2){msg.className='msg err';msg.textContent='Escreve o teu nome (2 a 30 caracteres).';return;}
+    b.disabled=true; store.set('lu25-manager',nm);
+    const {data,error}=await sb.rpc('guardar_equipa_rapido',{p_epoca:EPOCA,p_nome_equipa:fast.n,p_nome_treinador:nm,p_jogadores:fast.picks});
+    if(error){b.disabled=false;msg.className='msg err';msg.textContent='Não deu para guardar: '+errMsg(error);return;}
+    const r=Array.isArray(data)?data[0]:data; fast.added={id:r.id,posicao:r.posicao}; fastSave(); renderFast(); return;}
+});
+document.getElementById('f-reroll').addEventListener('click',()=>{
+  if(!fast||fast.phase!=='pick'||fast.rerolls<=0) return;
+  fast.rerolls--; fastDeal(fast.offer); fastSave(); renderFast();
+});
 
 // ---- regras de pontos ----
 (function(){
@@ -214,13 +302,14 @@ function route(){
   if(!BY.size) return;
   let v=location.hash.slice(1); current=store.get('lu25-current');
   if(v==='resultado'&&!current) v='montar';
-  if(!['montar','resultado','ranking','regras'].includes(v)) v=current?'resultado':'montar';
+  if(!['montar','resultado','ranking','regras','rapido'].includes(v)) v=current?'resultado':'montar';
   document.getElementById('v-build').hidden=v!=='montar';
   document.getElementById('v-res').hidden=v!=='resultado';
   document.getElementById('v-rank').hidden=v!=='ranking';
   document.getElementById('v-rules').hidden=v!=='regras';
+  document.getElementById('v-fast').hidden=v!=='rapido';
   document.querySelectorAll('.tabs a, .bottomnav a').forEach(a=>a.dataset.v===(v==='resultado'?'montar':v)?a.setAttribute('aria-current','page'):a.removeAttribute('aria-current'));
-  if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague();
+  if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague(); else if(v==='rapido') renderFast();
   renderAction();
   window.scrollTo(0,0);
 }
@@ -247,5 +336,6 @@ window.addEventListener('hashchange',route);
   BY=new Map(P.map(p=>[p.id,p]));
   pick=(store.get('lu25-draft')||[]).filter(id=>BY.has(id));
   current=store.get('lu25-current'); if(current&&!valid(current.p)) current=null;
+  fast=store.get('lu25-fast');
   fillTeams(); boot.remove(); route();
 })();
