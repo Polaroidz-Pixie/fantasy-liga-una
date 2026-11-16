@@ -108,11 +108,11 @@ document.getElementById('c-yes').addEventListener('click',async()=>{
   const map={}; (data||[]).forEach(r=>{map[r.jogador_id]=Number(r.pontos);});
   current={...team,pts:map,added:null};
   store.set('lu25-current',current);
-  location.hash='resultado'; route();
+  go('resultado');
 });
 document.getElementById('newteam').addEventListener('click',()=>{
   pick=[]; store.set('lu25-draft',pick); document.getElementById('tname').value=''; store.set('lu25-name','');
-  current=null; store.set('lu25-current',null); location.hash='montar';
+  current=null; store.set('lu25-current',null); go('montar');
 });
 
 // ---- resultado da equipa ----
@@ -207,6 +207,14 @@ function route(){
   if(v==='montar') renderAll(); else if(v==='resultado') renderResults(); else if(v==='ranking') loadLeague();
   window.scrollTo(0,0);
 }
+// A navegação entre separadores substitui a entrada atual do histórico em vez de criar novas:
+// assim o botão de recuar do telemóvel/browser sai da app em vez de voltar ao separador anterior.
+function go(v){ history.replaceState(null,'','#'+v); route(); }
+document.addEventListener('click',e=>{
+  const a=e.target.closest('a[href^="#"]'); if(!a||e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
+  const v=a.getAttribute('href').slice(1); if(!v) return;
+  e.preventDefault(); go(v);
+});
 window.addEventListener('hashchange',route);
 
 // ---- arranque ----
