@@ -263,5 +263,8 @@ details.team summary{cursor:pointer}
 .top3 li span{display:inline-block;max-width:calc(100% - 50px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}
 .top3 li b{float:right}
 .more{display:inline-block;margin-top:6px;font-size:13px;color:var(--net)}
-.h-foot{text-align:center;font-size:12px;margin:18px 0 6px}
+.h-league{text-align:center;margin-top:22px}
+.h-league .h-tag{margin:0 0 12px}
+.hero{padding-bottom:0}
+.h-foot{text-align:center;font-size:12px;margin:14px 0 6px}
 @media (max-width:999px){.h-liga{font-size:46px}}
