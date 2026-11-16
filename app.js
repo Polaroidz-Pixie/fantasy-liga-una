@@ -55,10 +55,12 @@ document.getElementById('court').addEventListener('click',e=>{
 });
 function renderList(){
   const q=document.getElementById('q').value.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
-  const t=teamSel.value, so=document.getElementById('sort').value, mx=parseFloat(document.getElementById('maxp').value)||Infinity;
+  const mpSel=document.getElementById('maxp'), left=Math.max(0,BUDGET-spent());
+  const bo=mpSel.querySelector('option[value="budget"]'); if(bo) bo.textContent=`Até ao que tenho disponível (${m(left)} M)`;
+  const t=teamSel.value, so=document.getElementById('sort').value, mx=mpSel.value==='budget'?left+1e-9:(parseFloat(mpSel.value)||Infinity);
   const pf=activePos?new Set([activePos]):posF;
   chips.querySelectorAll('.chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.p==='ALL'?!pf.size:pf.has(b.dataset.p)));
-  let L=P.filter(p=>p.price<=mx&&(!t||p.team===t)&&(!pf.size||pf.has(p.pos))&&(!q||p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(q)));
+  let L=P.filter(p=>(p.price<=mx||pick.includes(p.id))&&(!t||p.team===t)&&(!pf.size||pf.has(p.pos))&&(!q||p.name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').includes(q)));
   L.sort(so==='n'?(a,b)=>a.name.localeCompare(b.name,'pt'):so==='pa'?(a,b)=>a.price-b.price||a.name.localeCompare(b.name,'pt'):(a,b)=>b.price-a.price||a.name.localeCompare(b.name,'pt'));
   document.getElementById('lcount').textContent=`${L.length} jogador${L.length===1?'':'es'}${activePos?' · a escolher: '+POSL[activePos]:''}`;
   document.getElementById('list').innerHTML=L.map(p=>{
